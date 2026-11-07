@@ -1,11 +1,25 @@
 const express=require('express'),fs=require('fs'),crypto=require('crypto');
 const D=process.env.DATA_DIR||__dirname;require('fs').mkdirSync(D,{recursive:true});const F=D+'/db.json',app=express();
 let db=fs.existsSync(F)?JSON.parse(fs.readFileSync(F)):{users:[],products:[],orders:[],faqs:[],settings:{brand:'DHANEY CHEATS',logo:'',whatsapp:'',bank:'',qr:{}}};
-const save=()=>fs.writeFileSync(F,JSON.stringify(db));
+const R=process.env.SUPABASE_URL,K=process.env.SUPABASE_KEY,last={};
+const sb=(path,o={})=>fetch(R+path,{...o,headers:{apikey:K,...(String(K).startsWith('eyJ')?{Authorization:'Bearer '+K}:{}),...o.headers}});
+async function loadRemote(){const r=await sb('/rest/v1/kv?select=k,v');if(!r.ok)throw new Error('Supabase load failed '+r.status+' '+await r.text());(await r.json()).forEach(x=>{db[x.k]=x.v;last[x.k]=JSON.stringify(x.v)})}
+let busy=false,again=false;
+async function flush(){if(busy){again=true;return}busy=true;
+ try{const rows=Object.keys(db).map(k=>({k,s:JSON.stringify(db[k])})).filter(x=>last[x.k]!==x.s);
+  if(rows.length){const r=await sb('/rest/v1/kv',{method:'POST',headers:{'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'},body:'['+rows.map(x=>'{"k":'+JSON.stringify(x.k)+',"v":'+x.s+'}').join(',')+']'});
+   if(r.ok)rows.forEach(x=>last[x.k]=x.s);else console.log('SAVE FAILED',r.status,await r.text())}}catch(e){console.log('SAVE ERROR',e.message)}
+ busy=false;if(again){again=false;flush()}}
+const save=R?flush:()=>fs.writeFileSync(F,JSON.stringify(db));
+const enc=encodeURIComponent;
+async function keep(f){if(!R)return f;if(f.size>52428800){fs.unlink(f.path,()=>{});throw new Error('File too big for free storage (max 50 MB). Zip/compress it.')}
+ const key=id()+id()+'-'+f.name.replace(/ /g,'_'),r=await sb('/storage/v1/object/files/'+enc(key),{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:fs.readFileSync(f.path)});
+ fs.unlink(f.path,()=>{});if(!r.ok)throw new Error('Storage upload failed: '+await r.text());return{name:f.name,size:f.size,key}}
+async function rmStored(f){if(!f)return;if(f.key)await sb('/storage/v1/object/files/'+enc(f.key),{method:'DELETE'}).catch(()=>{});else fs.unlink(f.path,()=>{})}
 const id=()=>crypto.randomBytes(6).toString('hex');
 const hash=(p,s)=>crypto.scryptSync(p,s,64).toString('hex');
 const mk=(name,email,pw,role)=>{const salt=id();return{id:id(),name,email:email.toLowerCase(),salt,hash:hash(pw,salt),role,created:Date.now()}};
-if(!db.users.some(u=>u.role=='admin')){const e=process.env.ADMIN_EMAIL||'admin@dhaney.local',pw=process.env.ADMIN_PASSWORD||crypto.randomBytes(5).toString('hex');db.users.push(mk('Admin',e,pw,'admin'));save();console.log('\n=== ADMIN LOGIN ===\nEmail:',e,'\nPassword:',pw,'\n(change by deleting db.json users or set ADMIN_EMAIL/ADMIN_PASSWORD before first run)\n')}
+const initAdmin=()=>{if(!db.users.some(u=>u.role=='admin')){const e=process.env.ADMIN_EMAIL||'admin@dhaney.local',pw=process.env.ADMIN_PASSWORD||crypto.randomBytes(5).toString('hex');db.users.push(mk('Admin',e,pw,'admin'));save();console.log('\n=== ADMIN LOGIN ===\nEmail:',e,'\nPassword:',pw,'\n(change by deleting db.json users or set ADMIN_EMAIL/ADMIN_PASSWORD before first run)\n')}};
 const sess=new Map(),tries=new Map();
 const UP=D+'/uploads';fs.mkdirSync(UP,{recursive:true});
 function recv(req,res,done){if((+req.headers['content-length']||0)>1073741824)return res.status(413).json({error:'File too large (max 1GB)'});
@@ -41,9 +55,11 @@ app.post('/api/orders',need,(req,res)=>{const b=req.body,p=db.products.find(p=>p
  const o={id:'DC-'+Date.now().toString(36).toUpperCase(),userId:req.user.id,productId:p.id,productName:p.name,img:p.img,variant:v?v.label:'',price:v?v.price:p.price,whatsapp:b.whatsapp,info:String(b.info||'').slice(0,200),infoLabel:p.infoLabel||'',method:b.method,proof:String(b.proof||'').slice(0,4e6),status:'pending',delivery:'',created:Date.now()};
  db.orders.push(o);save();res.json({id:o.id})});
 app.get('/api/orders',need,(req,res)=>res.json(db.orders.filter(o=>o.userId==req.user.id).reverse().map(o=>{const p=db.products.find(p=>p.id==o.productId)||{},f=o.file||p.file,ok=o.status=='completed';return{...o,proof:undefined,file:undefined,delivery:ok?o.delivery:'',fileName:ok&&f?f.name:'',fileSize:ok&&f?f.size:0,filePass:ok&&f?(p.filePass||''):''}})));
-app.get('/api/orders/:id/download',need,(req,res)=>{const o=db.orders.find(o=>o.id==req.params.id);if(!o)return res.status(404).send('Not found');
+app.get('/api/orders/:id/download',need,async(req,res)=>{const o=db.orders.find(o=>o.id==req.params.id);if(!o)return res.status(404).send('Not found');
  if(!(o.userId==req.user.id&&o.status=='completed')&&req.user.role!='admin')return res.status(403).send('Not allowed');
- const f=o.file||(db.products.find(p=>p.id==o.productId)||{}).file;if(!f||!fs.existsSync(f.path))return res.status(404).send('No file');res.download(f.path,f.name)});
+ const f=o.file||(db.products.find(p=>p.id==o.productId)||{}).file;if(!f)return res.status(404).send('No file');
+ if(f.key){const r=await sb('/storage/v1/object/authenticated/files/'+enc(f.key));if(!r.ok)return res.status(404).send('File missing');res.set({'Content-Disposition':'attachment; filename="'+f.name+'"','Content-Type':'application/octet-stream'});return require('stream').Readable.fromWeb(r.body).pipe(res)}
+ if(!fs.existsSync(f.path))return res.status(404).send('File missing');res.download(f.path,f.name)});
 app.get('/api/admin/orders',adm,(req,res)=>res.json(db.orders.slice().reverse().map(o=>({...o,file:undefined,fileName:o.file?o.file.name:'',pFile:!!(db.products.find(p=>p.id==o.productId)||{}).file,user:(db.users.find(u=>u.id==o.userId)||{}).email}))));
 app.put('/api/admin/orders/:id',adm,(req,res)=>{const o=db.orders.find(o=>o.id==req.params.id);if(!o)return res.status(404).json({});
  if(['pending','processing','completed','canceled'].includes(req.body.status))o.status=req.body.status;o.delivery=String(req.body.delivery||'').slice(0,5000);save();res.json({})});
@@ -54,10 +70,11 @@ app.put('/api/admin/faqs',adm,(req,res)=>{db.faqs=(req.body||[]).map(f=>({q:Stri
 app.put('/api/admin/settings',adm,(req,res)=>{Object.assign(db.settings,{brand:req.body.brand||'DHANEY CHEATS',logo:req.body.logo||'',whatsapp:req.body.whatsapp||'',bank:req.body.bank||'',qr:req.body.qr||{}});save();res.json({})});
 app.get('/api/admin/users',adm,(req,res)=>res.json(db.users.map(me)));
 app.put('/api/admin/products/:id/maintenance',adm,(req,res)=>{const p=db.products.find(p=>p.id==req.params.id);if(!p)return res.status(404).json({});p.maintenance=!!req.body.on;save();res.json({})});
-app.get('/api/admin/backup',adm,(req,res)=>res.download(F,'dhaney-backup-'+new Date().toISOString().slice(0,10)+'.json'));
+app.get('/api/admin/backup',adm,(req,res)=>{res.set('Content-Disposition','attachment; filename=dhaney-backup-'+new Date().toISOString().slice(0,10)+'.json');res.type('json').send(JSON.stringify(db))});
+app.get('/healthz',async(req,res)=>{if(R)await sb('/rest/v1/kv?select=k&limit=1').catch(()=>{});res.send('ok')});
 const kinds={orders:()=>db.orders,products:()=>db.products};
 app.post('/api/admin/:k(orders|products)/:id/file',adm,(req,res)=>{const o=kinds[req.params.k]().find(o=>o.id==req.params.id);if(!o)return res.status(404).json({error:'Not found'});
- recv(req,res,f=>{if(o.file)fs.unlink(o.file.path,()=>{});o.file=f;save();res.json({name:f.name})})});
-app.delete('/api/admin/:k(orders|products)/:id/file',adm,(req,res)=>{const o=kinds[req.params.k]().find(o=>o.id==req.params.id);if(o&&o.file){fs.unlink(o.file.path,()=>{});delete o.file;save()}res.json({})});
+ recv(req,res,async f=>{try{await rmStored(o.file);o.file=await keep(f);save();res.json({name:f.name})}catch(e){res.status(400).json({error:e.message})}})});
+app.delete('/api/admin/:k(orders|products)/:id/file',adm,(req,res)=>{const o=kinds[req.params.k]().find(o=>o.id==req.params.id);if(o&&o.file){rmStored(o.file);delete o.file;save()}res.json({})});
 app.use(express.static(__dirname+'/public'));
-const srv=app.listen(process.env.PORT||3000,()=>console.log('Store running on http://localhost:'+(process.env.PORT||3000)));srv.requestTimeout=0;
+(async()=>{if(R)await loadRemote();initAdmin();const srv=app.listen(process.env.PORT||3000,()=>console.log('Store running on http://localhost:'+(process.env.PORT||3000)+(R?' (online database)':' (local files)')));srv.requestTimeout=0})().catch(e=>{console.error('START FAILED:',e.message);process.exit(1)});
