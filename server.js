@@ -26,7 +26,7 @@ function recv(req,res,done){if((+req.headers['content-length']||0)>1073741824)re
  const name=decodeURIComponent(req.headers['x-filename']||'file').replace(/[^\w.\- ]/g,'_').slice(0,120),p=UP+'/'+id()+id(),w=fs.createWriteStream(p);
  req.pipe(w);w.on('finish',()=>done({name,path:p,size:fs.statSync(p).size}));w.on('error',()=>res.status(500).json({error:'Upload failed'}))}
 app.use(express.json({limit:'12mb'}));
-app.use((req,res,next)=>{res.set({'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin'});
+app.use((req,res,next)=>{res.set({'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'strict-origin-when-cross-origin'});
  const c=(req.headers.cookie||'').match(/sid=([a-f0-9]+)/);const uid=c&&sess.get(c[1]);req.user=uid&&db.users.find(u=>u.id==uid);req.sid=c&&c[1];next()});
 const need=(req,res,next)=>req.user?next():res.status(401).json({error:'Login required'});
 const adm=(req,res,next)=>req.user&&req.user.role=='admin'?next():res.status(403).json({error:'Forbidden'});
