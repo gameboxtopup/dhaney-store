@@ -44,7 +44,7 @@ app.post('/api/login',(req,res)=>{const k=req.ip,t=tries.get(k)||{n:0,at:Date.no
  login(req,res,u);res.json(me(u))});
 app.post('/api/logout',(req,res)=>{sess.delete(req.sid);res.set('Set-Cookie','sid=; Max-Age=0; Path=/');res.json({})});
 app.get('/api/me',(req,res)=>res.json(me(req.user)||null));
-app.get('/api/public',(req,res)=>res.json({settings:db.settings,products:db.products.map(({file,filePass,...p})=>({...p,hasFile:!!file})),faqs:db.faqs}));
+app.get('/api/public',(req,res)=>res.json({settings:db.settings,products:db.products.map(({file,filePass,...p})=>({...p,hasFile:!!file})),faqs:db.faqs,reviews:(db.reviews||[]).map(r=>({id:r.id,productId:r.productId,rating:r.rating,text:r.text,name:mask(r.name),created:r.created}))}));
 app.post('/api/orders',need,(req,res)=>{const b=req.body,p=db.products.find(p=>p.id==b.productId);
  if(!p)return res.status(400).json({error:'Product not found'});
  if(p.maintenance)return res.status(400).json({error:'This product is under maintenance'});
@@ -63,7 +63,7 @@ app.get('/api/orders/:id/download',need,async(req,res)=>{const o=db.orders.find(
  if(!fs.existsSync(f.path))return res.status(404).send('File missing');res.download(f.path,f.name)});
 app.get('/api/admin/orders',adm,(req,res)=>res.json(db.orders.slice().reverse().map(o=>({...o,file:undefined,fileName:o.file?o.file.name:'',pFile:!!(db.products.find(p=>p.id==o.productId)||{}).file,user:(db.users.find(u=>u.id==o.userId)||{}).email}))));
 app.put('/api/admin/orders/:id',adm,(req,res)=>{const o=db.orders.find(o=>o.id==req.params.id);if(!o)return res.status(404).json({});
- if(['pending','processing','completed','canceled'].includes(req.body.status))o.status=req.body.status;o.delivery=String(req.body.delivery||'').slice(0,5000);save();res.json({})});
+ if(['pending','processing','completed','canceled'].includes(req.body.status))o.status=req.body.status;if(o.status=='completed'&&!o.done)o.done=Date.now();o.delivery=String(req.body.delivery||'').slice(0,5000);save();res.json({})});
 app.put('/api/admin/products',adm,(req,res)=>{const p=req.body,cs=String(p.category||'GENERAL').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean).slice(0,10);let x=db.products.find(a=>a.id==p.id);if(!x){x={id:id()};db.products.push(x)}
  Object.assign(x,{name:String(p.name||'').slice(0,100),category:cs[0]||'GENERAL',categories:cs.length?cs:['GENERAL'],price:+p.price||0,oldPrice:+p.oldPrice||0,imgs:(Array.isArray(p.imgs)&&p.imgs.filter(Boolean).length?p.imgs.filter(Boolean).slice(0,3):(x.imgs||[x.img].filter(Boolean))),maintenance:!!p.maintenance,popular:!!p.popular,infoLabel:String(p.infoLabel||'').slice(0,40),filePass:p.filePass?String(p.filePass).slice(0,200):(x.filePass||''),desc:String(p.desc||''),video:String(p.video||''),variants:(p.variants||[]).filter(v=>v.label).map(v=>({label:String(v.label),price:+v.price||0,out:!!v.out}))});x.img=(x.imgs||[])[0]||'';save();res.json({id:x.id})});
 app.delete('/api/admin/products/:id',adm,(req,res)=>{db.products=db.products.filter(p=>p.id!=req.params.id);save();res.json({})});
@@ -72,7 +72,14 @@ app.put('/api/admin/settings',adm,(req,res)=>{Object.assign(db.settings,{brand:r
 app.get('/api/admin/users',adm,(req,res)=>res.json(db.users.map(me)));
 app.put('/api/admin/products/:id/maintenance',adm,(req,res)=>{const p=db.products.find(p=>p.id==req.params.id);if(!p)return res.status(404).json({});p.maintenance=!!req.body.on;save();res.json({})});
 app.get('/api/admin/backup',adm,(req,res)=>{res.set('Content-Disposition','attachment; filename=dhaney-backup-'+new Date().toISOString().slice(0,10)+'.json');res.type('json').send(JSON.stringify(db))});
+app.get('/api/live-orders',(req,res)=>{res.set('Cache-Control','no-store');res.json(db.orders.filter(o=>o.status=='completed').sort((a,b)=>(b.done||b.created)-(a.done||a.created)).slice(0,5).map(o=>{const u=db.users.find(u=>u.id==o.userId)||{},n=String(u.name||'Customer').trim().split(/\s+/);return{name:n[0]+(n[1]?' '+n[1][0]+'.':''),product:o.productName,variant:o.variant,price:o.price,at:o.done||o.created}}))});
 app.get('/healthz',async(req,res)=>{if(R)await sb('/rest/v1/kv?select=k&limit=1').catch(()=>{});res.send('ok')});
+const mask=n=>{const w=String(n||'User').trim().split(/\s+/)[0]||'User';return w.length<=2?w[0]+'***':w[0]+'***'+w.slice(-1)};
+app.post('/api/reviews',need,(req,res)=>{const b=req.body,p=db.products.find(p=>p.id==b.productId);if(!p)return res.status(400).json({error:'Product not found'});
+ const rating=Math.min(5,Math.max(1,Math.round(+b.rating||5))),text=String(b.text||'').trim().slice(0,300);if(!text)return res.status(400).json({error:'Write a few words first'});
+ if(!db.orders.some(o=>o.userId==req.user.id&&o.productId==p.id&&o.status=='completed'))return res.status(403).json({error:'Only customers with a completed order can review this product'});
+ db.reviews=(db.reviews||[]).filter(r=>!(r.userId==req.user.id&&r.productId==p.id));db.reviews.push({id:id(),productId:p.id,userId:req.user.id,name:req.user.name,rating,text,created:Date.now()});save();res.json({})});
+app.delete('/api/admin/reviews/:id',adm,(req,res)=>{db.reviews=(db.reviews||[]).filter(r=>r.id!=req.params.id);save();res.json({})});
 const kinds={orders:()=>db.orders,products:()=>db.products};
 app.post('/api/admin/:k(orders|products)/:id/file',adm,(req,res)=>{const o=kinds[req.params.k]().find(o=>o.id==req.params.id);if(!o)return res.status(404).json({error:'Not found'});
  recv(req,res,async f=>{try{await rmStored(o.file);o.file=await keep(f);save();res.json({name:f.name})}catch(e){res.status(400).json({error:e.message})}})});
