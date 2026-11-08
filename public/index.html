@@ -31,6 +31,12 @@ footer{border-top:1px solid var(--line);margin-top:50px;padding:24px 0;color:var
 .live{position:absolute;right:8px;top:8px;background:#052e16;color:#22c55e;border:1px solid #166534;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;z-index:1}
 .pc .desc{color:var(--mu);font-size:12px;margin:4px 0 8px;min-height:32px;overflow:hidden}.cb{display:flex;flex-direction:column;gap:6px;margin-top:10px}.cb .btn{width:100%;font-size:12px;padding:9px}.btn.o{background:#ffffff0d;border:1px solid var(--line);color:#ddd}
 .opt.out{opacity:.55;text-decoration:line-through;cursor:not-allowed}.oos{display:inline-block;background:#7f1d1d;color:#fecaca;font-size:10px;padding:1px 7px;border-radius:99px;margin-left:6px}
+.lo{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:760px){.lo{grid-template-columns:1fr}}
+.lo-item{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.lo-item.new{animation:pop .6s ease}@keyframes pop{from{opacity:0;transform:translateY(-14px) scale(.97)}to{opacity:1;transform:none}}
+.av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex:none}
+.lp{color:var(--mu);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vtag{background:#ffffff12;padding:1px 6px;border-radius:6px}
+.done{background:#052e16;color:#22c55e;border:1px solid #166534;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px}
 </style></head><body>
 <header><div class="w nav"><a href="#/" class="logo" id="logo"></a><span class="sp"></span>
 <div class="nl"><a class="l" href="#/">Home</a><a class="l" href="#/shop">Shop</a><a class="l" href="#/faq">FAQ / Tutorials</a></div><span id="auth"></span></div></header>
@@ -38,7 +44,7 @@ footer{border-top:1px solid var(--line);margin-top:50px;padding:24px 0;color:var
 <footer><div class="w">© <span id="fb"></span> — Digital products, delivered to your account. Need help? Contact us on WhatsApp.</div></footer>
 <a class="wa" id="wa" target="_blank" rel="noopener">✆</a><div id="soc"></div><div id="mod"></div>
 <script>
-const $=s=>document.querySelector(s),app=$('#app');let S={},P=[],FQ=[],U=null,cat='';
+const $=s=>document.querySelector(s),app=$('#app');let S={},P=[],FQ=[],RV=[],U=null,cat='';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const api=async(u,m='GET',b)=>{const r=await fetch('/api/'+u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Error');return j};
 const rs=n=>'Rs '+Number(n).toLocaleString();const SOC={discord:['#5865f2','Discord','<svg viewBox="0 0 24 24"><path fill="#fff" d="M5 6c2-1.2 4-1.5 4-1.5l.5 1c1-.15 2-.15 3 0l.5-1s2 .3 4 1.5c2.5 3 3.500 6.500 3.300 10-1.600 1.200-3.200 1.700-3.200 1.700l-.8-1.300c.5-.2 1-.5 1.400-.8-1.800.8-3.600 1.200-5.500 1.200s-3.700-.4-5.500-1.200c.4.3.9.6 1.400.8l-.8 1.300S3.300 17.200 1.700 16C1.500 12.500 2.500 9 5 6z"/><circle cx="9" cy="12.300" r="1.700" fill="#5865f2"/><circle cx="15" cy="12.300" r="1.700" fill="#5865f2"/></svg>'],
@@ -46,11 +52,17 @@ const rs=n=>'Rs '+Number(n).toLocaleString();const SOC={discord:['#5865f2','Disc
  youtube:['#f00','YouTube','<svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4" fill="#fff"/><path d="M10 9l5 3-5 3z" fill="#f00"/></svg>'],
  facebook:['#1877f2','Facebook','<svg viewBox="0 0 24 24"><path fill="#fff" d="M24 12.070C24 5.400 18.630 0 12 0S0 5.400 0 12.070C0 18.100 4.390 23.100 10.130 24v-8.440H7.080v-3.490h3.050V9.410c0-3.020 1.800-4.700 4.540-4.700 1.310 0 2.680.240 2.680.240v2.970h-1.500c-1.500 0-1.960.930-1.960 1.890v2.260h3.330l-.530 3.500h-2.800V24C19.620 23.100 24 18.100 24 12.070z"/></svg>']};
 function socials(){const s=S.social||{};$('#soc').innerHTML=Object.keys(SOC).filter(k=>/^https?:/.test(s[k]||'')).map(k=>`<a href="${esc(s[k])}" target="_blank" rel="noopener" title="${SOC[k][1]}" style="background:${SOC[k][0]}">${SOC[k][2]}</a>`).join('')}
+const stars=n=>'★'.repeat(n)+'☆'.repeat(5-n);
+function reviews(p){const L=RV.filter(r=>r.productId==p.id),avg=L.length?(L.reduce((a,r)=>a+r.rating,0)/L.length).toFixed(1):'';
+ return`<div class="card" style="padding:18px;margin-top:24px"><h3 style="margin-top:0">Customer reviews ${L.length?`<span style="color:var(--ac2)">★ ${avg}</span> <small style="color:var(--mu)">(${L.length})</small>`:''}</h3>${L.map(r=>`<div style="border-top:1px solid var(--line);padding:10px 0"><span style="color:var(--ac2)">${stars(r.rating)}</span> <b>${esc(r.name)}</b> ${U&&U.role=='admin'?`<a href="#" style="color:#f87171" onclick="delRev('${r.id}');return false">✕ delete</a>`:''}<div style="color:#c9c9d8">${esc(r.text)}</div></div>`).join('')||'<p style="color:var(--mu)">No reviews yet.</p>'}
+ ${U?`<div style="border-top:1px solid var(--line);padding-top:12px"><label>Your rating</label><select id="rr">${[5,4,3,2,1].map(n=>`<option value="${n}">${stars(n)}</option>`).join('')}</select><textarea id="rt" rows="2" placeholder="Write your review (customers with a completed order)"></textarea><div class="err" id="re"></div><button class="btn s" onclick="sendRev('${p.id}')">Submit review</button></div>`:'<p style="color:var(--mu)">Log in to write a review.</p>'}</div>`}
+async function sendRev(id){try{await api('reviews','POST',{productId:id,rating:+$('#rr').value,text:$('#rt').value});await boot()}catch(e){$('#re').textContent=e.message}}
+const delRev=async id=>{await api('admin/reviews/'+id,'DELETE');await boot()};
 const gal=p=>p.imgs&&p.imgs.length?p.imgs:[p.img];
 const fileData=f=>new Promise(r=>{const x=new FileReader();x.onload=()=>{const i=new Image();i.onload=()=>{const m=Math.min(1,900/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*m;c.height=i.height*m;c.getContext('2d').drawImage(i,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.85))};i.src=x.result};x.readAsDataURL(f)});
 function video(u){if(!u)return'';let m=u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);if(m)return`<iframe class="vid" src="https://www.youtube.com/embed/${m[1]}" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe><div style="margin-top:8px"><a style="color:var(--ac2);font-size:13px" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=${m[1]}">▶ Not playing? Open on YouTube</a></div>`;return/^https?:/.test(u)?`<a class="btn g" target="_blank" rel="noopener" href="${esc(u)}">▶ Watch video</a>`:''}
 const logoHtml=()=>S.logo?`<img src="${S.logo}" alt="">`:`<svg height="34" viewBox="0 0 40 40"><path d="M20 2 36 10v14c0 8-7 12-16 14C11 36 4 32 4 24V10z" fill="#ff3b4e"/><path d="M12 12h8c6 0 9 3 9 8s-3 8-9 8h-8zm5 4v8h3c3 0 4-2 4-4s-1-4-4-4z" fill="#fff"/></svg><span>${esc(S.brand)}</span>`;
-async function boot(){const d=await api('public');S=d.settings;P=d.products;FQ=d.faqs;U=await api('me');document.title=S.brand;$('#logo').innerHTML=logoHtml();$('#fb').textContent=S.brand;
+async function boot(){const d=await api('public');S=d.settings;P=d.products;FQ=d.faqs;RV=d.reviews||[];U=await api('me');document.title=S.brand;$('#logo').innerHTML=logoHtml();$('#fb').textContent=S.brand;
  $('#wa').href='https://wa.me/'+(S.whatsapp||'').replace(/\D/g,'');$('#wa').style.display=S.whatsapp?'flex':'none';socials();
  $('#auth').innerHTML=U?`<a class="btn g s" href="#/account">👤 My Orders</a> ${U.role=='admin'?'<a class="btn s" href="#/admin">Admin</a>':''} <button class="btn g s" onclick="out()">Logout</button>`:`<a class="btn s" href="#/login">Login / Sign up</a>`;route()}
 async function out(){await api('logout','POST');U=null;location.hash='#/';boot()}
@@ -65,7 +77,7 @@ function shop(q=''){const T=tabs();if(!cat||!T.includes(cat))cat=T[0]=='POPULAR'
  if(cat=='ALL'){const g={};L.forEach(p=>pcats(p).forEach(k=>(g[k]=g[k]||[]).push(p)));body=Object.keys(g).map(k=>sec(k,g[k])).join('')}else if(L.length)body=sec(cat,L);
  return`<div class="tabs">${T.map((c,i)=>`<span class="pill ${c==cat?'on':''}" onclick="setCat(${i})">${c=='UPDATING'?'⏳ ':c=='POPULAR'?'🔥 ':''}${esc(c)}</span>`).join('')}</div>${body||'<p style="color:var(--mu);text-align:center;margin-top:26px">No products here yet.</p>'}`}
 const R={
- home:()=>`<div class="hero"><h1>${esc(S.brand)}</h1><p>Premium tools, bots & files. Pay with eSewa, Khalti or Bank — get it in your account.</p><a class="btn" href="#/shop">Browse products</a></div>${shop()}`,
+ home:()=>`<div class="hero"><h1>${esc(S.brand)}</h1><p>Premium tools, bots & files. Pay with eSewa, Khalti or Bank — get it in your account.</p><a class="btn" href="#/shop">Browse products</a></div>${shop()}<div id="lo"></div>`,
  shop:()=>`<h1>Shop</h1><input placeholder="Search products…" oninput="$('#sr').innerHTML=shop(this.value.toLowerCase())"><div id="sr">${shop()}</div>`,
  faq:()=>`<h1>FAQ & Tutorials</h1>${FQ.map(f=>`<div class="card" style="padding:16px;margin-bottom:12px"><b>${esc(f.q)}</b><p style="color:var(--mu);white-space:pre-wrap">${esc(f.a)}</p>${video(f.video)}</div>`).join('')||'<p>Nothing here yet.</p>'}`,
  login:()=>`<div class="card" style="max-width:380px;margin:40px auto;padding:20px"><h2 style="margin-top:0" id="lt">Login</h2><div id="nm" style="display:none"><label>Name</label><input id="n"></div><label>Email</label><input id="e" type="email"><label>Password</label><input id="pw" type="password"><div class="err" id="er"></div><button class="btn" style="width:100%" onclick="doAuth()" id="lb">Login</button><p style="text-align:center;color:var(--mu);cursor:pointer" onclick="reg=!reg;$('#nm').style.display=reg?'block':'none';$('#lt').textContent=$('#lb').textContent=reg?'Create account':'Login'">Switch Login / Sign up</p></div>`,
@@ -77,7 +89,7 @@ function product(id){const p=P.find(x=>x.id==id);if(!p)return'<p>Not found</p>';
  ${p.variants?.length?`<p><b>Select option</b><br>${p.variants.map((v,i)=>`<span class="opt ${v.out?'out':i==p.variants.findIndex(x=>!x.out)?'on':''}" ${v.out?'':`onclick="pick(${i},this)"`}>${esc(v.label)} · ${rs(v.price)}${v.out?' <b class="oos">OUT OF STOCK</b>':''}</span>`).join('')}</p>`:''}
  ${p.infoLabel?`<label>${esc(p.infoLabel)} *</label><input id="info" placeholder="Enter your ${esc(p.infoLabel)}">`:''}<label>Your WhatsApp number *</label><input id="wn" placeholder="98XXXXXXXX"><div class="err" id="er"></div>
  ${(p.maintenance||(p.variants&&p.variants.length&&p.variants.every(v=>v.out)))?'<div class="card" style="padding:12px;border-color:#b45309;color:#fbbf24;margin-bottom:10px">'+(p.maintenance?'🛠 This product is under maintenance.':'❌ All options are out of stock.')+' Buying is disabled for now — please check back soon or contact us on WhatsApp.</div><button class="btn" style="width:100%" disabled>UNABLE TO BUY</button>':'<button class="btn" style="width:100%" onclick="buy()">BUY NOW</button>'}${p.video?`<p><button class="btn g" style="width:100%" onclick="showVid()">▶ Setup / Details video</button></p>`:''}</div></div>
- <div class="card" style="padding:18px;margin-top:24px"><h3 style="margin-top:0">Description</h3><div style="white-space:pre-wrap;color:#c9c9d8">${esc(p.desc)}</div></div>`}
+ <div class="card" style="padding:18px;margin-top:24px"><h3 style="margin-top:0">Description</h3><div style="white-space:pre-wrap;color:#c9c9d8">${esc(p.desc)}</div></div>${reviews(p)}`}
 const pick=(i,el)=>{sel.v=sel.p.variants[i];document.querySelectorAll('.opt').forEach(o=>o.classList.remove('on'));el.classList.add('on');price()};
 const price=()=>{const e=$('#pp');if(e)e.textContent=rs(sel.v?sel.v.price:sel.p.price)};
 const showVid=()=>modal(`<h3 style="margin-top:0">${esc(sel.p.name)} — Setup</h3>${video(sel.p.video)}<br><button class="btn g" onclick="modal()">Close</button>`);
@@ -120,6 +132,10 @@ async function saveProd(id){const old=P.find(x=>x.id==id)||{},cur=old.imgs&&old.
  const r=await api('admin/products','PUT',{id,name:$('#pn').value,category:$('#pc').value,price:$('#ppr').value||(variants[0]?.price||0),oldPrice:$('#po').value,variants,imgs,maintenance:$('#pmt').checked,popular:$('#ppop').checked,infoLabel:$('#pil').value,filePass:$('#pfp').value,video:$('#pvd').value,desc:$('#pd').value});const pf=$('#pf').files[0];if(pf){modal('<p>Uploading file… please wait, do not close this page.</p>');const rr=await fetch(`/api/admin/products/${r.id}/file`,{method:'POST',headers:{'Content-Type':'application/octet-stream','X-Filename':encodeURIComponent(pf.name)},body:pf});if(!rr.ok)alert((await rr.json()).error)}modal();await boot()}
 async function route(){modal();const h=location.hash.slice(2)||'home',[k,a]=h.split('/');let html;
  try{html=k=='p'?product(a):k=='account'?await account():k=='admin'?await admin():(R[k]||R.home)()}catch(e){html='<p>'+esc(e.message)+'</p>'}
- app.innerHTML=html;price();window.scrollTo(0,0)}
+ app.innerHTML=html;price();window.scrollTo(0,0);liveOrders()}
+let loSig='';const col=s=>'hsl('+([...s].reduce((a,c)=>a+c.charCodeAt(0),0)*37%360)+',55%,42%)';
+async function liveOrders(){const el=$('#lo');if(!el)return;try{const d=await api('live-orders'),sig=JSON.stringify(d.map(x=>x.at+x.name)),fresh=loSig!==''&&sig!=loSig;loSig=sig;
+ el.innerHTML=d.length?`<h3 class="sec">⚡ LIVE ORDERS</h3><div class="lo">${d.map((x,i)=>`<div class="lo-item ${fresh&&i==0?'new':''}"><div class="av" style="background:${col(x.name)}">${esc(x.name.slice(0,2).toUpperCase())}</div><div style="flex:1;min-width:0"><b>${esc(x.name)}</b><div class="lp">${esc(x.product)}${x.variant?' · <span class="vtag">'+esc(x.variant)+'</span>':''}</div></div><div style="text-align:right"><span class="done">COMPLETED</span><div class="price" style="margin-top:4px">${rs(x.price)}</div></div></div>`).join('')}</div>`:''}catch(e){}}
+setInterval(()=>{if($('#lo'))liveOrders()},30000);
 addEventListener('hashchange',route);boot();
 </script></body></html>
