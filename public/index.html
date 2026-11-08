@@ -59,7 +59,9 @@ const tabs=()=>{const t=[];if(P.some(p=>p.popular))t.push('POPULAR');t.push('ALL
 const setCat=i=>{cat=tabs()[i];route()};
 const inTab=(p,c)=>c=='ALL'||(c=='POPULAR'?p.popular:c=='UPDATING'?p.maintenance:p.category==c);
 function shop(q=''){const T=tabs();if(!cat||!T.includes(cat))cat=T[0]=='POPULAR'?'POPULAR':'ALL';
- return`<div class="tabs">${T.map((c,i)=>`<span class="pill ${c==cat?'on':''}" onclick="setCat(${i})">${c=='UPDATING'?'⏳ ':c=='POPULAR'?'🔥 ':''}${esc(c)}</span>`).join('')}</div><h3 class="sec">${esc(cat)} PRODUCTS</h3><div class="grid">${P.filter(p=>inTab(p,cat)&&p.name.toLowerCase().includes(q)).map(card).join('')||'<p style="color:var(--mu);text-align:center;grid-column:1/-1">No products here yet.</p>'}</div>`}
+ const L=P.filter(p=>inTab(p,cat)&&p.name.toLowerCase().includes(q)),sec=(h,a)=>`<h3 class="sec">${esc(h)}</h3><div class="grid">${a.map(card).join('')}</div>`;let body='';
+ if(cat=='ALL'){const g={};L.forEach(p=>(g[p.category]=g[p.category]||[]).push(p));body=Object.keys(g).map(k=>sec(k,g[k])).join('')}else if(L.length)body=sec(cat,L);
+ return`<div class="tabs">${T.map((c,i)=>`<span class="pill ${c==cat?'on':''}" onclick="setCat(${i})">${c=='UPDATING'?'⏳ ':c=='POPULAR'?'🔥 ':''}${esc(c)}</span>`).join('')}</div>${body||'<p style="color:var(--mu);text-align:center;margin-top:26px">No products here yet.</p>'}`}
 const R={
  home:()=>`<div class="hero"><h1>${esc(S.brand)}</h1><p>Premium tools, bots & files. Pay with eSewa, Khalti or Bank — get it in your account.</p><a class="btn" href="#/shop">Browse products</a></div>${shop()}`,
  shop:()=>`<h1>Shop</h1><input placeholder="Search products…" oninput="$('#sr').innerHTML=shop(this.value.toLowerCase())"><div id="sr">${shop()}</div>`,
