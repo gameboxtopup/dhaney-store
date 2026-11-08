@@ -49,6 +49,7 @@ app.post('/api/orders',need,(req,res)=>{const b=req.body,p=db.products.find(p=>p
  if(!p)return res.status(400).json({error:'Product not found'});
  if(p.maintenance)return res.status(400).json({error:'This product is under maintenance'});
  const v=(p.variants||[]).find(v=>v.label==b.variant);if((p.variants||[]).length&&!v)return res.status(400).json({error:'Select an option'});
+ if(v&&v.out)return res.status(400).json({error:'This option is out of stock'});
  if(p.infoLabel&&!String(b.info||'').trim())return res.status(400).json({error:p.infoLabel+' is required'});
  if(!/^[0-9+\s-]{7,16}$/.test(b.whatsapp||''))return res.status(400).json({error:'Valid WhatsApp number required'});
  if(!['esewa','khalti','bank'].includes(b.method))return res.status(400).json({error:'Choose payment method'});
@@ -64,7 +65,7 @@ app.get('/api/admin/orders',adm,(req,res)=>res.json(db.orders.slice().reverse().
 app.put('/api/admin/orders/:id',adm,(req,res)=>{const o=db.orders.find(o=>o.id==req.params.id);if(!o)return res.status(404).json({});
  if(['pending','processing','completed','canceled'].includes(req.body.status))o.status=req.body.status;o.delivery=String(req.body.delivery||'').slice(0,5000);save();res.json({})});
 app.put('/api/admin/products',adm,(req,res)=>{const p=req.body;let x=db.products.find(a=>a.id==p.id);if(!x){x={id:id()};db.products.push(x)}
- Object.assign(x,{name:String(p.name||'').slice(0,100),category:String(p.category||'GENERAL').toUpperCase(),price:+p.price||0,oldPrice:+p.oldPrice||0,imgs:(Array.isArray(p.imgs)&&p.imgs.filter(Boolean).length?p.imgs.filter(Boolean).slice(0,3):(x.imgs||[x.img].filter(Boolean))),maintenance:!!p.maintenance,popular:!!p.popular,infoLabel:String(p.infoLabel||'').slice(0,40),filePass:p.filePass?String(p.filePass).slice(0,200):(x.filePass||''),desc:String(p.desc||''),video:String(p.video||''),variants:(p.variants||[]).filter(v=>v.label).map(v=>({label:String(v.label),price:+v.price||0}))});x.img=(x.imgs||[])[0]||'';save();res.json({id:x.id})});
+ Object.assign(x,{name:String(p.name||'').slice(0,100),category:String(p.category||'GENERAL').toUpperCase(),price:+p.price||0,oldPrice:+p.oldPrice||0,imgs:(Array.isArray(p.imgs)&&p.imgs.filter(Boolean).length?p.imgs.filter(Boolean).slice(0,3):(x.imgs||[x.img].filter(Boolean))),maintenance:!!p.maintenance,popular:!!p.popular,infoLabel:String(p.infoLabel||'').slice(0,40),filePass:p.filePass?String(p.filePass).slice(0,200):(x.filePass||''),desc:String(p.desc||''),video:String(p.video||''),variants:(p.variants||[]).filter(v=>v.label).map(v=>({label:String(v.label),price:+v.price||0,out:!!v.out}))});x.img=(x.imgs||[])[0]||'';save();res.json({id:x.id})});
 app.delete('/api/admin/products/:id',adm,(req,res)=>{db.products=db.products.filter(p=>p.id!=req.params.id);save();res.json({})});
 app.put('/api/admin/faqs',adm,(req,res)=>{db.faqs=(req.body||[]).map(f=>({q:String(f.q||''),a:String(f.a||''),video:String(f.video||'')}));save();res.json({})});
 app.put('/api/admin/settings',adm,(req,res)=>{Object.assign(db.settings,{brand:req.body.brand||'DHANEY CHEATS',logo:req.body.logo||'',whatsapp:req.body.whatsapp||'',bank:req.body.bank||'',qr:req.body.qr||{},social:Object.fromEntries(Object.entries(req.body.social||{}).filter(([k,v])=>/^https?:\/\//.test(v)).map(([k,v])=>[k,String(v).slice(0,300)]))});save();res.json({})});
