@@ -72,7 +72,8 @@ app.put('/api/admin/settings',adm,(req,res)=>{Object.assign(db.settings,{brand:r
 app.get('/api/admin/users',adm,(req,res)=>res.json(db.users.map(me)));
 app.put('/api/admin/products/:id/maintenance',adm,(req,res)=>{const p=db.products.find(p=>p.id==req.params.id);if(!p)return res.status(404).json({});p.maintenance=!!req.body.on;save();res.json({})});
 app.get('/api/admin/backup',adm,(req,res)=>{res.set('Content-Disposition','attachment; filename=dhaney-backup-'+new Date().toISOString().slice(0,10)+'.json');res.type('json').send(JSON.stringify(db))});
-app.get('/api/live-orders',(req,res)=>{res.set('Cache-Control','no-store');res.json(db.orders.filter(o=>o.status=='completed').sort((a,b)=>(b.done||b.created)-(a.done||a.created)).slice(0,5).map(o=>{const u=db.users.find(u=>u.id==o.userId)||{},n=String(u.name||'Customer').trim().split(/\s+/);return{name:n[0]+(n[1]?' '+n[1][0]+'.':''),product:o.productName,variant:o.variant,price:o.price,at:o.done||o.created}}))});
+const lmask=n=>{const w=String(n||'Customer').trim().split(/\s+/)[0].toUpperCase();return w.length<4?w[0]+'***':w.slice(0,2)+'***'+w.slice(-1)};
+app.get('/api/live-orders',(req,res)=>{res.set('Cache-Control','no-store');res.json(db.orders.filter(o=>o.status=='completed').sort((a,b)=>(b.done||b.created)-(a.done||a.created)).slice(0,5).map(o=>{const u=db.users.find(u=>u.id==o.userId)||{},n=String(u.name||'Customer').trim().split(/\s+/);return{name:lmask(u.name),product:o.productName,variant:o.variant,price:o.price,at:o.done||o.created}}))});
 app.get('/healthz',async(req,res)=>{if(R)await sb('/rest/v1/kv?select=k&limit=1').catch(()=>{});res.send('ok')});
 const mask=n=>{const w=String(n||'User').trim().split(/\s+/)[0]||'User';return w.length<=2?w[0]+'***':w[0]+'***'+w.slice(-1)};
 app.post('/api/reviews',need,(req,res)=>{const b=req.body,p=db.products.find(p=>p.id==b.productId);if(!p)return res.status(400).json({error:'Product not found'});
