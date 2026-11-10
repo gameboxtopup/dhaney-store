@@ -43,12 +43,32 @@ footer{border-top:1px solid var(--line);margin-top:50px;padding:24px 0;color:var
 #pp .ph{height:150px;display:flex;align-items:center;justify-content:center}#pp .ph.im{height:auto}#pp .ph img{width:100%;display:block}#pp .ph svg{width:72px;height:72px}
 #pp .pt{padding:18px 20px 22px;text-align:center}#pp .pt h3{margin:0 0 8px}#pp .pt p{color:var(--mu);font-size:14px;margin:0 0 16px}#pp .go{display:block;color:#fff;padding:13px;border-radius:12px;font-weight:700}
 @keyframes ppin{from{transform:scale(.92);opacity:0}}
+html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
+.btn{background:linear-gradient(135deg,#ff3b4e,#e11d48);transition:.15s}.btn:active{transform:scale(.97)}.card{box-shadow:0 6px 22px #0004}
+#bn,#soc .st{display:none}
+@media(max-width:760px){
+body{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+header .nav{flex-wrap:nowrap;height:56px;padding:0;gap:8px}.nl{display:none}.logo img{height:32px}
+#auth a[href="#/account"]{display:none}#auth .btn{padding:6px 10px;font-size:12px}
+#bn{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:12;background:#0e0e17f2;backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+#bn a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--mu);padding:4px 0;border-radius:10px}
+#bn a svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}#bn a.on{color:var(--ac2)}
+.wa{right:14px;bottom:calc(80px + env(safe-area-inset-bottom));width:48px;height:48px}
+#soc{top:auto;transform:none;right:14px;bottom:calc(138px + env(safe-area-inset-bottom));gap:8px;align-items:center}
+#soc a{display:none;width:42px;height:42px}#soc.open a{display:flex}
+#soc .st{display:flex;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#1b1b28;color:#fff;font-size:18px;align-items:center;justify-content:center;box-shadow:0 4px 12px #0008;cursor:pointer}
+input,select,textarea{font-size:16px}.btn{min-height:42px}.btn.s{min-height:36px}.opt{padding:10px 14px}
+.grid{gap:10px}.pc .b{padding:10px}.pc .desc{font-size:11px;min-height:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.cb .btn{font-size:11px;padding:8px 4px}
+.tabs{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding-bottom:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.tabs::-webkit-scrollbar{display:none}.tabs .pill{white-space:nowrap;flex:0 0 auto}
+.hero{padding:32px 0}.sec{margin:20px 0 14px}h1{font-size:24px;margin:20px 0 12px}.w{padding:0 12px}
+.modal{align-items:flex-end;padding:0}.modal>div{max-width:100%;border-radius:18px 18px 0 0;max-height:90vh;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+}
 </style></head><body>
 <header><div class="w nav"><a href="#/" class="logo" id="logo"></a><span class="sp"></span>
 <div class="nl"><a class="l" href="#/">Home</a><a class="l" href="#/shop">Shop</a><a class="l" href="#/faq">FAQ / Tutorials</a></div><span id="auth"></span></div></header>
 <main class="w" id="app"></main>
 <footer><div class="w">© <span id="fb"></span> — Digital products, delivered to your account. Need help? Contact us on WhatsApp.</div></footer>
-<a class="wa" id="wa" target="_blank" rel="noopener">✆</a><div id="pp" onclick="if(event.target===this)closeCur()"></div><div id="soc"></div><div id="mod"></div>
+<nav id="bn"><a href="#/"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a><a href="#/shop"><svg viewBox="0 0 24 24"><path d="M6 7h12l1 13H5z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>Shop</a><a href="#/faq"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7"/><path d="M12 17h.01"/></svg>Help</a><a href="#/account"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Account</a></nav><a class="wa" id="wa" target="_blank" rel="noopener">✆</a><div id="pp" onclick="if(event.target===this)closeCur()"></div><div id="soc"></div><div id="mod"></div>
 <script>
 const $=s=>document.querySelector(s),app=$('#app');let S={},P=[],FQ=[],RV=[],U=null,cat='';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -57,7 +77,8 @@ const rs=n=>'Rs '+Number(n).toLocaleString();const SOC={telegram:['#229ed9','Tel
  tiktok:['#000','TikTok','<span style="font-size:24px;font-weight:800;color:#fff;text-shadow:2px 2px #ff0050,-2px -2px #00f2ea">♪</span>'],
  youtube:['#f00','YouTube','<svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4" fill="#fff"/><path d="M10 9l5 3-5 3z" fill="#f00"/></svg>'],
  facebook:['#1877f2','Facebook','<svg viewBox="0 0 24 24"><path fill="#fff" d="M24 12.070C24 5.400 18.630 0 12 0S0 5.400 0 12.070C0 18.100 4.390 23.100 10.130 24v-8.440H7.080v-3.490h3.050V9.410c0-3.020 1.800-4.700 4.540-4.700 1.310 0 2.680.240 2.680.240v2.970h-1.500c-1.500 0-1.960.930-1.960 1.890v2.260h3.330l-.530 3.500h-2.800V24C19.620 23.100 24 18.100 24 12.070z"/></svg>']};
-function socials(){const s=S.social||{};$('#soc').innerHTML=Object.keys(SOC).filter(k=>/^https?:/.test(s[k]||'')).map(k=>`<a href="${esc(s[k])}" target="_blank" rel="noopener" title="${SOC[k][1]}" style="background:${SOC[k][0]}">${SOC[k][2]}</a>`).join('')}
+function socials(){const s=S.social||{},h=Object.keys(SOC).filter(k=>/^https?:/.test(s[k]||'')).map(k=>`<a href="${esc(s[k])}" target="_blank" rel="noopener" title="${SOC[k][1]}" style="background:${SOC[k][0]}">${SOC[k][2]}</a>`).join('');$('#soc').innerHTML=h?h+'<button class="st" type="button" aria-label="Social links" onclick="this.parentNode.classList.toggle(\'open\')">🔗</button>':''}
+function updNav(){const h=location.hash||'#/',x=h.startsWith('#/p/')?'#/shop':h.startsWith('#/login')?'#/account':h;document.querySelectorAll('#bn a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==x))}
 const stars=n=>'★'.repeat(n)+'☆'.repeat(5-n);
 function reviews(p){const L=RV.filter(r=>r.productId==p.id),avg=L.length?(L.reduce((a,r)=>a+r.rating,0)/L.length).toFixed(1):'';
  return`<div class="card" style="padding:18px;margin-top:24px"><h3 style="margin-top:0">Customer reviews ${L.length?`<span style="color:var(--ac2)">★ ${avg}</span> <small style="color:var(--mu)">(${L.length})</small>`:''}</h3>${L.map(r=>`<div style="border-top:1px solid var(--line);padding:10px 0"><span style="color:var(--ac2)">${stars(r.rating)}</span> <b>${esc(r.name)}</b> ${U&&U.role=='admin'?`<a href="#" style="color:#f87171" onclick="delRev('${r.id}');return false">✕ delete</a>`:''}<div style="color:#c9c9d8">${esc(r.text)}</div></div>`).join('')||'<p style="color:var(--mu)">No reviews yet.</p>'}
@@ -143,7 +164,7 @@ async function saveProd(id){const old=P.find(x=>x.id==id)||{},cur=old.imgs&&old.
  const r=await api('admin/products','PUT',{id,name:$('#pn').value,category:$('#pc').value,price:$('#ppr').value||(variants[0]?.price||0),oldPrice:$('#po').value,variants,imgs,maintenance:$('#pmt').checked,popular:$('#ppop').checked,infoLabel:$('#pil').value,filePass:$('#pfp').value,video:$('#pvd').value,desc:$('#pd').value});const pf=$('#pf').files[0];if(pf){modal('<p>Uploading file… please wait, do not close this page.</p>');const rr=await fetch(`/api/admin/products/${r.id}/file`,{method:'POST',headers:{'Content-Type':'application/octet-stream','X-Filename':encodeURIComponent(pf.name)},body:pf});if(!rr.ok)alert((await rr.json()).error)}modal();await boot()}
 async function route(){modal();clearInterval(liveT);const h=location.hash.slice(2)||'home',[k,a]=h.split('/');let html;
  try{html=k=='p'?product(a):k=='account'?await account():k=='admin'?await admin():(R[k]||R.home)()}catch(e){html='<p>'+esc(e.message)+'</p>'}
- app.innerHTML=html;price();if(location.hash!=lastH){window.scrollTo(0,0);lastH=location.hash}liveOrders();if(k=='account'&&U)liveT=setInterval(pollOrders,4000);if(k=='admin'&&U&&U.role=='admin')liveT=setInterval(pollAdmin,8000)}
+ app.innerHTML=html;price();if(location.hash!=lastH){window.scrollTo(0,0);lastH=location.hash}updNav();liveOrders();if(k=='account'&&U)liveT=setInterval(pollOrders,4000);if(k=='admin'&&U&&U.role=='admin')liveT=setInterval(pollAdmin,8000)}
 let loSig='';const col=s=>'hsl('+([...s].reduce((a,c)=>a+c.charCodeAt(0),0)*37%360)+',55%,42%)';
 async function liveOrders(){const el=$('#lo');if(!el)return;try{const d=await api('live-orders'),sig=JSON.stringify(d.map(x=>x.at+x.name)),fresh=loSig!==''&&sig!=loSig;loSig=sig;
  el.innerHTML=d.length?`<h3 class="sec">⚡ LIVE ORDERS</h3><div class="lo">${d.map((x,i)=>`<div class="lo-item ${fresh&&i==0?'new':''}"><div class="av" style="background:${col(x.name)}">${esc(x.name.slice(0,2).toUpperCase())}</div><div style="flex:1;min-width:0"><b>${esc(x.name)}</b><div class="lp">${esc(x.product)}${x.variant?' · <span class="vtag">'+esc(x.variant)+'</span>':''}</div></div><div style="text-align:right"><span class="done">COMPLETED</span><div class="price" style="margin-top:4px">${rs(x.price)}</div></div></div>`).join('')}</div>`:''}catch(e){}}
