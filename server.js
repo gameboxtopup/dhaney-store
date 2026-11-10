@@ -53,6 +53,7 @@ app.post('/api/orders',need,(req,res)=>{const b=req.body,p=db.products.find(p=>p
  if(p.infoLabel&&!String(b.info||'').trim())return res.status(400).json({error:p.infoLabel+' is required'});
  if(!/^[0-9+\s-]{7,16}$/.test(b.whatsapp||''))return res.status(400).json({error:'Valid WhatsApp number required'});
  if(!['esewa','khalti','bank'].includes(b.method))return res.status(400).json({error:'Choose payment method'});
+ if(!/^data:image\//.test(b.proof||''))return res.status(400).json({error:'Please upload your payment screenshot'});
  const o={id:'DC-'+Date.now().toString(36).toUpperCase(),userId:req.user.id,productId:p.id,productName:p.name,img:p.img,variant:v?v.label:'',price:v?v.price:p.price,whatsapp:b.whatsapp,info:String(b.info||'').slice(0,200),infoLabel:p.infoLabel||'',method:b.method,proof:String(b.proof||'').slice(0,4e6),status:'pending',delivery:'',created:Date.now()};
  db.orders.push(o);save();res.json({id:o.id})});
 app.get('/api/orders',need,(req,res)=>res.json(db.orders.filter(o=>o.userId==req.user.id).reverse().map(o=>{const p=db.products.find(p=>p.id==o.productId)||{},f=o.file||p.file,ok=o.status=='completed';return{...o,proof:undefined,file:undefined,delivery:ok?o.delivery:'',fileName:ok&&f?f.name:'',fileSize:ok&&f?f.size:0,filePass:ok&&f?(p.filePass||''):''}})));
@@ -81,6 +82,7 @@ app.post('/api/reviews',need,(req,res)=>{const b=req.body,p=db.products.find(p=>
  if(!db.orders.some(o=>o.userId==req.user.id&&o.productId==p.id&&o.status=='completed'))return res.status(403).json({error:'Only customers with a completed order can review this product'});
  db.reviews=(db.reviews||[]).filter(r=>!(r.userId==req.user.id&&r.productId==p.id));db.reviews.push({id:id(),productId:p.id,userId:req.user.id,name:req.user.name,rating,text,created:Date.now()});save();res.json({})});
 app.delete('/api/admin/reviews/:id',adm,(req,res)=>{db.reviews=(db.reviews||[]).filter(r=>r.id!=req.params.id);save();res.json({})});
+app.delete('/api/admin/orders/:id',adm,(req,res)=>{const o=db.orders.find(o=>o.id==req.params.id);if(!o)return res.status(404).json({error:'Not found'});rmStored(o.file);db.orders=db.orders.filter(x=>x.id!=o.id);save();res.json({})});
 const kinds={orders:()=>db.orders,products:()=>db.products};
 app.post('/api/admin/:k(orders|products)/:id/file',adm,(req,res)=>{const o=kinds[req.params.k]().find(o=>o.id==req.params.id);if(!o)return res.status(404).json({error:'Not found'});
  recv(req,res,async f=>{try{await rmStored(o.file);o.file=await keep(f);save();res.json({name:f.name})}catch(e){res.status(400).json({error:e.message})}})});
