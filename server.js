@@ -42,6 +42,13 @@ app.post('/api/login',(req,res)=>{const k=req.ip,t=tries.get(k)||{n:0,at:Date.no
  const u=db.users.find(u=>u.email==String(req.body.email||'').toLowerCase());
  if(!u||hash(String(req.body.password||''),u.salt)!==u.hash){t.n++;tries.set(k,t);return res.status(400).json({error:'Wrong email or password'})}
  login(req,res,u);res.json(me(u))});
+app.post('/api/google',async(req,res)=>{try{const cid=db.settings.googleClientId||process.env.GOOGLE_CLIENT_ID;if(!cid)return res.status(400).json({error:'Google login is not set up yet'});
+ const r=await fetch('https://oauth2.googleapis.com/tokeninfo?id_token='+encodeURIComponent(String(req.body.credential||''))),j=await r.json();
+ if(!r.ok||j.aud!==cid||!/accounts\.google\.com$/.test(j.iss||'')||String(j.email_verified)!=='true'||!j.email||+j.exp*1000<Date.now())return res.status(400).json({error:'Google sign-in failed'});
+ const email=String(j.email).toLowerCase();let u=db.users.find(u=>u.email==email);
+ if(u&&u.role=='admin')return res.status(403).json({error:'Admin must log in with email and password'});
+ if(!u){u=mk(String(j.name||email.split('@')[0]).slice(0,60),email,crypto.randomBytes(16).toString('hex'),'user');u.google=true;db.users.push(u);save()}
+ login(req,res,u);res.json(me(u))}catch(e){res.status(500).json({error:'Google sign-in failed'})}});
 app.post('/api/logout',(req,res)=>{sess.delete(req.sid);res.set('Set-Cookie','sid=; Max-Age=0; Path=/');res.json({})});
 app.get('/api/me',(req,res)=>res.json(me(req.user)||null));
 app.get('/api/public',(req,res)=>res.json({settings:db.settings,products:db.products.map(({file,filePass,...p})=>({...p,hasFile:!!file})),faqs:db.faqs,reviews:(db.reviews||[]).map(r=>({id:r.id,productId:r.productId,rating:r.rating,text:r.text,name:mask(r.name),created:r.created}))}));
@@ -73,7 +80,7 @@ const RATE_DEF={INR:0.625,USDT:0.0071,BDT:0.87,PKR:2.0};
 const cleanRates=x=>{x=x||{};const o={};for(const k of['INR','USDT','BDT','PKR']){const v=+x[k];o[k]=v>0&&v<1e6?v:((db.settings.rates||RATE_DEF)[k]||RATE_DEF[k])}return o};
 async function refreshRates(){if(db.settings.autoRates===false)return;try{const r=await fetch('https://open.er-api.com/v6/latest/NPR'),j=await r.json(),x=j&&j.rates;
  if(x){const n={INR:x.INR,USDT:x.USD,BDT:x.BDT,PKR:x.PKR};if(Object.values(n).every(v=>v>0)){db.settings.rates=n;db.settings.ratesAt=Date.now();save()}}}catch(e){console.log('rates fetch failed:',e.message)}}
-app.put('/api/admin/settings',adm,(req,res)=>{Object.assign(db.settings,{brand:req.body.brand||'DHANEY CHEATS',logo:req.body.logo||'',whatsapp:req.body.whatsapp||'',bank:req.body.bank||'',qr:req.body.qr||{},popup:{telegram:String((req.body.popup||{}).telegram||'').slice(0,4e6),discord:String((req.body.popup||{}).discord||'').slice(0,4e6)},rates:cleanRates(req.body.rates),autoRates:req.body.autoRates!==false,social:Object.fromEntries(Object.entries(req.body.social||{}).filter(([k,v])=>/^https?:\/\//.test(v)).map(([k,v])=>[k,String(v).slice(0,300)]))});save();res.json({})});
+app.put('/api/admin/settings',adm,(req,res)=>{Object.assign(db.settings,{brand:req.body.brand||'DHANEY CHEATS',logo:req.body.logo||'',whatsapp:req.body.whatsapp||'',bank:req.body.bank||'',qr:req.body.qr||{},popup:{telegram:String((req.body.popup||{}).telegram||'').slice(0,4e6),discord:String((req.body.popup||{}).discord||'').slice(0,4e6)},rates:cleanRates(req.body.rates),autoRates:req.body.autoRates!==false,googleClientId:String(req.body.googleClientId||'').trim().slice(0,200),social:Object.fromEntries(Object.entries(req.body.social||{}).filter(([k,v])=>/^https?:\/\//.test(v)).map(([k,v])=>[k,String(v).slice(0,300)]))});save();res.json({})});
 app.get('/api/admin/users',adm,(req,res)=>res.json(db.users.map(me)));
 app.put('/api/admin/products/:id/maintenance',adm,(req,res)=>{const p=db.products.find(p=>p.id==req.params.id);if(!p)return res.status(404).json({});p.maintenance=!!req.body.on;save();res.json({})});
 app.get('/api/admin/backup',adm,(req,res)=>{res.set('Content-Disposition','attachment; filename=dhaney-backup-'+new Date().toISOString().slice(0,10)+'.json');res.type('json').send(JSON.stringify(db))});
