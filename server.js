@@ -105,6 +105,7 @@ app.post('/api/reviews',need,(req,res)=>{const b=req.body,p=db.products.find(p=>
  db.reviews=(db.reviews||[]).filter(r=>!(r.userId==req.user.id&&r.productId==p.id));db.reviews.push({id:id(),productId:p.id,userId:req.user.id,name:req.user.name,rating,text,created:Date.now()});save();res.json({})});
 app.delete('/api/admin/reviews/:id',adm,(req,res)=>{db.reviews=(db.reviews||[]).filter(r=>r.id!=req.params.id);save();res.json({})});
 app.delete('/api/admin/orders/:id',adm,(req,res)=>{const o=db.orders.find(o=>o.id==req.params.id);if(!o)return res.status(404).json({error:'Not found'});rmStored(o.file);db.orders=db.orders.filter(x=>x.id!=o.id);save();res.json({})});
+app.put('/api/admin/cat-order',adm,(req,res)=>{const a=Array.isArray(req.body.order)?req.body.order:[];db.settings.catOrder=[...new Set(a.map(s=>String(s).trim().toUpperCase().slice(0,60)).filter(Boolean))].slice(0,60);save();res.json({})});
 const kinds={orders:()=>db.orders,products:()=>db.products};
 app.post('/api/admin/:k(orders|products)/:id/file',adm,(req,res)=>{const o=kinds[req.params.k]().find(o=>o.id==req.params.id);if(!o)return res.status(404).json({error:'Not found'});
  recv(req,res,async f=>{try{await rmStored(o.file);o.file=await keep(f);save();res.json({name:f.name})}catch(e){res.status(400).json({error:e.message})}})});
